@@ -1,0 +1,550 @@
+/* =======================================================
+   ⚙️ 0. 全局基本設定
+   ======================================================= */
+body, html {
+    margin: 0; padding: 0; 
+    width: 100%; height: 100%;
+    font-family: 'Microsoft JhengHei', sans-serif;
+    background-color: #000; color: #fff; 
+    overflow: hidden;
+}
+
+.screen {
+    position: absolute; 
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column; 
+    justify-content: center; align-items: center;
+    transition: opacity 0.5s ease;
+}
+
+.hidden { display: none !important; }
+.active { display: flex !important; }
+
+
+/* =======================================================
+   🎪 1. 主選單與彈出視窗
+   ======================================================= */
+/* 主選單容器（滿版動態背景） */
+#start-screen {
+    position: relative;
+    width: 100%; height: 100vh;
+    background-image: url('images/startscreen.gif');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* 統一按鈕與照片基本設定 */
+.menu-photo, .menu-button {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+    z-index: 10;
+}
+
+.menu-photo { pointer-events: none; } /* 讓去背透明區域不會擋到滑鼠 */
+.menu-button { cursor: pointer; transition: transform 0.2s; }
+.menu-button:hover { transform: translateX(-50%) scale(1.03); }
+
+/* 主選單專屬按鈕碰撞箱定位 */
+#btn-start        { top: 60px;  left: 800px; width: 600px; height: 200px; background-image: url('images/startbtn.png'); }
+#btn-settings     { top: 210px; left: 800px; width: 600px; height: 200px; background-image: url('images/settings.png'); }
+#btn-achievements { top: 360px; left: 800px; width: 600px; height: 200px; background-image: url('images/endings.png'); }
+
+/* 🏆 結局成就視窗與卡片排版 */
+.popup {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000;
+}
+.popup-content {
+    background: #222; padding: 30px; border-radius: 10px; border: 1px solid #ff4444; text-align: center;
+}
+.endings-container {
+    width: 800px; height: 420px;
+    position: relative;
+    background: url('images/endcontain.png') no-repeat center/cover;
+}
+.ending-card {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    text-align: center; width: 800px; 
+}
+.ending-pic-slot {
+    width: 800px; height: 420px;       
+    background-size: contain; background-repeat: no-repeat; background-position: center;
+    margin-bottom: 12px; transition: all 0.4s ease;
+    filter: brightness(0); opacity: 0; /* 🔒 未解鎖時完全隱形 */
+}
+.ending-pic-slot.unlocked {
+    filter: brightness(1); opacity: 1; /* 🔓 解鎖後顯現 */
+    transform: scale(1.05); 
+}
+.ending-card p {
+    font-size: 13px; color: #aaa; margin: 0; opacity: 0; transition: opacity 0.4s ease;
+}
+.ending-pic-slot.unlocked + p { opacity: 1; }
+
+.ending-circles { display: flex; gap: 15px; margin: 20px 0; }
+.circle {
+    width: 50px; height: 50px; border-radius: 50%; background: #444;
+    display: flex; justify-content: center; align-items: center; font-weight: bold;
+}
+.circle.unlocked { background: #ff4444; box-shadow: 0 0 10px #ff4444; }
+
+/* 結局圖片路徑 */
+#end-circle-1 { background-image: url('images/thedoll.png'); }
+#end-circle-2 { background-image: url('images/stay.png'); }
+#end-circle-3 { background-image: url('images/why.png'); }
+#end-circle-4 { background-image: url('images/thetruth.png'); }
+
+
+/* =======================================================
+   🎮 2. 遊戲主畫面核心視窗與怪物設定
+   ======================================================= */
+#game-main { justify-content: flex-start; }
+
+#scene-display {
+    width: 90%; max-width: 800px; height: 420px; 
+    margin: 15px 0; position: relative; 
+    border: 3px solid #444; overflow: hidden; background-color: #111;
+    background-size: cover; background-position: center; background-repeat: no-repeat;
+}
+
+/* 🎥 影片背景與怪物層次 */
+.room-video-bg {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1;
+}
+#monster {
+    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100px; height: 100px; z-index: 10; pointer-events: none;
+    background: url('images/monster.png') no-repeat center/contain;
+}
+.monster-approaching { animation: monsterIn 10s linear forwards; }
+@keyframes monsterIn { 0% { width: 80px; height: 80px; opacity: 0.1; } 100% { width: 450px; height: 450px; opacity: 1; } }
+
+
+/* =======================================================
+   🧱 3. 長廊場景（純透明門與相框碰撞箱）
+   ======================================================= */
+#hallway-scene {
+    position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: 5;
+}
+
+/* 強制讓所有 Stage 門扉與相框的父群組定位撐滿 */
+.stage-doors {
+    position: absolute !important; top: 0 !important; left: 0 !important;
+    width: 100% !important; height: 100% !important; pointer-events: none;
+}
+.stage-doors * { pointer-events: auto; } /* 讓內部子元素恢復可點擊 */
+
+/* 🚪 房間門純透明碰撞箱 */
+.interactive-door {
+    position: absolute !important; top: 100px !important;
+    width: 30px; height: 300px; z-index: 100; cursor: pointer;
+}
+.door-left  { left: 270px !important; }
+.door-right { right: 250px !important; }
+
+/* 🚪 Stage 4 特殊出口大門碰撞箱 */
+.door-exit {
+    width: 110px !important; height: 110px !important; top: 200px !important;
+    left: 52% !important; transform: translateX(-50%) !important;
+}
+
+/* 🖼️ 走廊 1~3 段小相框純透明碰撞箱 */
+.hallway-frame-hitbox {
+    position: absolute !important; top: 90px !important;
+    width: 30px !important; height: 50px !important; z-index: 105; cursor: pointer;
+}
+.frame-left  { left: 240px !important; }
+.frame-right { right: 220px !important; }
+
+/* 👣 長廊前進、後退與返回控制按鈕 */
+.arrow-btn { position: absolute; cursor: pointer; transition: transform 0.2s; z-index: 200; }
+.arrow-btn { width: 100%; height: auto; object-fit: contain; }
+.arrow-btn:hover { transform: scale(1.1); }
+
+.arrow-forward { left: 380px; bottom: 100px; width: 55px; height: 55px; background: url('images/arrowfront.png') no-repeat center/contain; filter: drop-shadow(0 0 5px #00ff00); }
+.arrow-backward { left: 380px; bottom: 50px; width: 55px; height: 55px; background: url('images/arrowback.png') no-repeat center/contain; filter: drop-shadow(0 0 5px #ff4444); }
+.back-to-start-btn {
+    position: absolute;
+    bottom: 25px;           /* 🚀 距離畫面底部的高度 */
+    left: 360px;             /* 🚀 靠畫面左側（可依喜好調整，如改為 right: 20px 靠右） */
+    width: 45px;            /* 按鈕寬度 */
+    height: 45px;           /* 按鈕高度 */
+    cursor: pointer;
+    z-index: 200;           /* 層級設高，確保不被背景擋住 */
+    background: url('images/arrowback.png') no-repeat center/contain; /* 🚀 使用你的返回按鈕圖片路徑 */
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
+    transition: transform 0.2s, filter 0.2s;
+}
+
+/* 滑鼠懸停特效 */
+.back-to-start-btn:hover {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 8px #ffcd1a); /* 移上去會發金光 */
+}
+
+#room-controls { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); z-index: 150; }
+.screen-back-btn {
+    background: url('images/arrowback.png') no-repeat center/contain;
+    border: none; padding: 0; width: 40px; height: 40px; cursor: pointer; z-index: 300;
+    transition: transform 0.2s, filter 0.2s;
+}
+.screen-back-btn:hover { transform: scale(1.1); filter: drop-shadow(0 0 8px #ff4444); }
+
+
+/* =======================================================
+   🧸 4. 房間內互動道具基本設定
+   ======================================================= */
+/* 📸 圖片路徑映射（場景道具與物品欄共用） */
+#room-doll, .slot.item-doll   { background-image: url('images/doll.png') !important; }
+#room-diary, .slot.item-diary { background-image: url('images/diarybook.png') !important; }
+#room-box, .slot.item-box     { background-image: url('images/chest.png') !important; }
+#room-key, .slot.item-key     { background-image: url('images/keys.png') !important; }
+#room-photo, .slot.item-photo { background-image: url('images/lostpage.png') !important; }
+
+.interactive-item, .slot {
+    background-size: contain !important; background-position: center !important; background-repeat: no-repeat !important;
+}
+
+/* 房間場景道具屬性 */
+.interactive-item {
+    position: absolute; cursor: pointer; z-index: 50; display: none; /* 預設隱藏，由下方房間連動判定開啟 */
+    transition: transform 0.2s, filter 0.2s;
+}
+.interactive-item:hover { transform: scale(1.1); filter: drop-shadow(0 0 8px #ffcd1a); }
+
+/* 道具在房間畫面中的精確尺寸與坐標 */
+#room-doll  { width: 90px;  height: 90px;  top: 250px; left: 200px; }
+#room-diary { width: 75px;  height: 75px;  top: 190px; left: 560px; }
+#room-box   { width: 100px; height: 100px; top: 290px; left: 400px; }
+#room-key   { width: 60px;  height: 60px;  top: 230px; left: 640px; }
+
+/* 房間道具連動出現判定（未撿取時才顯示） */
+#scene-display.bg-room1 #room-doll:not(.picked)   { display: block !important; }
+#scene-display.bg-room6 #room-diary:not(.picked)  { display: block !important; }
+#scene-display.bg-room7 #room-box:not(.picked)    { display: block !important; }
+#scene-display.bg-room8 #room-key:not(.picked)    { display: block !important; }
+
+
+/* =======================================================
+   🪞 5. 房間 3 鏡子特殊事件與特寫
+   ======================================================= */
+#room-mirror {
+    position: absolute; width: 120px; height: 160px; top: 100px; left: 500px; z-index: 50; cursor: pointer;
+}
+/* 廁所場景內才亮起鏡子碰撞箱 */
+#scene-display.bg-room3 #room-mirror { display: block !important; }
+
+/* 鏡子全畫面特寫場景 */
+.bg-mirror-view { background-image: url('images/mirror_view.png'); }
+#scene-display.bg-mirror-view .interactive-item { display: none !important; } /* 防道具穿透 */
+
+/* 鏡子驚嚇全螢幕影片層級 */
+#mirror-video {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 800;
+}
+
+
+/* =======================================================
+   📸 6. 相框獨立放大特寫場景
+   ======================================================= */
+/* 6 個相框各自點進去後的放大背景圖匯總 */
+#scene-display.bg-frame-1-left        { background-image: url('images/frame1.png'); }
+#scene-display.bg-frame-1-right       { background-image: url('images/frame2.png'); }
+#scene-display.bg-frame-2-left        { background-image: url('images/frame5.png'); }
+#scene-display.bg-frame-2-right       { background-image: url('images/frame4.png'); }
+#scene-display.bg-frame-3-left        { background-image: url('images/frame3.png'); }
+#scene-display.bg-frame-3-left-empty  { background-image: url('images/frame3broken.png'); }
+#scene-display.bg-frame-3-right       { background-image: url('images/frame6.png'); }
+
+/* 專屬 Stage 3 左側大照片點擊範圍 */
+#scene-photo-item {
+    position: absolute; width: 200px; height: 280px; top: 100px; left: 300px; z-index: 120; cursor: pointer;
+}
+#scene-photo-item.picked { display: none !important; }
+
+
+/* =======================================================
+   🔒 7. 大門獨立特寫場景與自訂提示框（YES/NO）
+   ======================================================= */
+#scene-display.bg-exit-zoom-view {
+    background-image: url('images/exitdoor.png'); background-size: cover; background-position: center;
+}
+
+/* 鎖孔純透明點擊碰撞箱 */
+#lock-hitbox {
+    position: absolute; width: 80px; height: 80px; top: 200px; left: 540px; z-index: 120; cursor: pointer;
+}
+
+/* 滿版黑底自訂提示框容器 */
+#custom-decision-popup {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.75); display: flex; justify-content: center; align-items: center; z-index: 250;
+}
+.custom-popup-content { position: relative; width: auto; height: auto; display: inline-block; }
+
+/* 提示框底圖 */
+.popup-base-img {
+    display: block; width: 500px; height: 300px; pointer-events: auto;
+    background: url('images/enteroption.png') no-repeat center/contain;
+}
+
+/* YES / NO 透明按鈕碰撞箱與測試設定 */
+.transparent-choice-btn { position: absolute; cursor: pointer; z-index: 210; }
+
+#btn-yes {
+    width: 120px; height: 50px; bottom: 30px; left: 160px;
+    background-color: rgba(0, 255, 0, 0.15) !important; /* 🛠️ 測試用綠色半透明 */
+}
+#btn-no {
+    width: 120px; height: 50px; bottom: 30px; right: 80px;
+    background-color: rgba(255, 0, 0, 0.15) !important; /* 🛠️ 測試用紅色半透明 */
+}
+
+
+/* =======================================================
+   💬 8. 視覺小說對白框系統
+   ======================================================= */
+.dialog-box {
+    position: absolute; bottom: 10px; left: 5%; width: 90%; height: 110px;
+    background: rgba(5, 5, 5, 0.95); border: 2px solid #444; border-radius: 6px;
+    box-sizing: border-box; padding: 12px 20px; 
+    z-index: 900; /* 高於一般場景與道具，但低於自訂彈窗 */
+    backdrop-filter: blur(4px); transition: all 0.2s; cursor: pointer;
+    pointer-events: auto !important;
+}
+.dialog-box:hover { border-color: #666; }
+
+.dialog-speaker { font-size: 13px; color: #ffcd1a; font-weight: bold; margin-bottom: 5px; letter-spacing: 1px; }
+.dialog-content { position: relative; height: 60px; }
+#dialog-text { margin: 0; font-size: 14px; color: #eee; line-height: 1.5; text-align: left; }
+
+.dialog-hint {
+    position: absolute; right: 0; bottom: -5px; font-size: 11px; color: #888;
+    animation: bounceHint 0.8s infinite alternate;
+}
+@keyframes bounceHint { 0% { transform: translateY(0); } 100% { transform: translateY(3px); } }
+
+
+/* =======================================================
+   🎒 9. 下方 HUD 控制面板與背包格子
+   ======================================================= */
+.game-controls { 
+    width: 90%; max-width: 800px; display: flex; align-items: center; justify-content: space-between;
+    background: #111; padding: 15px; border-radius: 8px; border: 1px solid #333; box-sizing: border-box;
+}
+.inventory-container { flex-grow: 1; margin-left: 30px; display: flex; flex-direction: column; align-items: flex-start; }
+.inventory-title { font-size: 12px; color: #888; margin-bottom: 5px; letter-spacing: 1px; }
+.inventory-slots { display: flex; gap: 10px; }
+
+.inventory-slots .slot { width: 55px !important; height: 55px !important; }
+.inventory-slots .slot.empty { background-image: none !important; opacity: 0.3; }
+.inventory-slots .slot.acquired {
+    border-color: #ffcd1a; background-color: rgba(40, 40, 30, 0.8); opacity: 1; cursor: pointer;
+}
+.inventory-slots .slot.acquired:hover { 
+    transform: scale(1.05); box-shadow: 0 0 10px rgba(255, 205, 26, 0.5); 
+}
+
+
+/* =======================================================
+   🎬 10. 遊戲結束電影感滿版結局 CG
+   ======================================================= */
+#game-over-box { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+#ending-photo-display {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background-size: cover; background-repeat: no-repeat; background-position: center;
+    z-index: 1; opacity: 0; transition: opacity 1.2s ease; /* 電影感緩慢淡入 */
+}
+#ending-photo-display.show-pic { opacity: 1; }
+
+.end-return-btn {
+    position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); z-index: 10;
+    width: 120px; height: 50px; background: url('images/returnbtn.png') no-repeat center; cursor: pointer;
+    box-shadow: 0 0 10px rgba(255, 205, 26, 0.3); transition: all 0.3s ease;
+}
+
+/* 各個結局的滿版圖/動圖路徑 */
+.show-end-1 { background-image: url('images/ending1.gif'); }
+.show-end-2 { background-image: url('images/ending2.gif'); }
+.show-end-3 { background-image: url('images/ending3.png'); }
+.show-end-4 { background-image: url('images/ending4.png'); }
+
+
+/* =======================================================
+   🖼️ 11. 靜態場景背景圖註冊總匯
+   ======================================================= */
+.bg-start-room { background-image: url('images/startroom.png'); }
+
+/* 長廊各段背景 */
+.bg-hallway-1  { background-image: url('images/hallway1.png'); }
+.bg-hallway-2  { background-image: url('images/hallway2.png'); }
+.bg-hallway-3  { background-image: url('images/hallway3.png'); }
+.bg-hallway-4  { background-image: url('images/hallway4.png'); }
+
+/* 獨立房間背景 */
+.bg-room1      { background-image: url('images/kidsroom.png'); }
+.bg-room2      { background-image: url('images/guestroom.gif'); }
+.bg-room3      { background-image: url('images/bathroom.png'); }
+.bg-room4      { background-image: url('room4.jpg'); }
+.bg-room5      { background-image: url('room5.jpg'); }
+.bg-room6      { background-image: url('images/kitchen.png'); }
+.bg-room7      { background-image: url('images/mothersroom.png'); }
+.bg-room8      { background-image: url('images/storeroom.png'); }
+
+/* =======================================================
+   💀 房間 4 第二次進入的彩蛋背景圖
+   ======================================================= */
+.bg-room4-scare { 
+    background-image: url('images/cantgoback.png') !important; /* 🚀 替換成你的彩蛋恐怖圖片路徑 */
+    background-size: cover;
+    background-position: center;
+}
+
+/* 動畫特效 */
+.fade-text { font-size: 24px; animation: pulse 3s infinite; }
+@keyframes pulse { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+
+/* =======================================================
+   🔍 物品調查特寫視窗樣式
+   ======================================================= */
+#item-investigate-overlay {
+    position: absolute;
+    top: 30px; left: 180px;
+    width: 480px; height: 250px;
+    background: rgba(0, 0, 0, 0); /* 半透明黑背景 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 250 !important; /* 🚀 核心：確保比對話框(通常是100001)還要高 */
+}
+
+.investigate-content {
+    position: relative;
+    width: 480px;  /* 可依據你的特寫圖大小調整 */
+    height: 250px;
+    background: #111;
+    border: 3px solid #555;
+    box-shadow: 0 0 20px rgba(0,0,0,0.8);
+}
+
+#investigate-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* =======================================================
+   🔍 調查視窗大圖控制
+   ======================================================= */
+
+#investigate-img {
+    width: 100%;
+    height: 100%;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    position: relative;
+}
+
+/* 🧸 普通物品（娃娃、鑰匙、從盒子拿出來的完整照片） */
+#investigate-img.item-doll-normal  { background-image: url('images/doll.png'); }
+#investigate-img.item-key-normal   { background-image: url('images/keys.png'); }
+#investigate-img.item-photo-normal { background-image: url('images/lostpage.png'); } /* 盒子裡拿出來的完整照片 */
+
+/* 📦 八音盒（盒子）的三種狀態圖 */
+#investigate-img.item-box-closed   { background-image: url('images/chest.png'); }  /* 未開鎖 */
+#investigate-img.item-box-opened   { background-image: url('images/chestopen.png'); }  /* 已開鎖，看得到裡面的完整照片 */
+#investigate-img.item-box-empty    { background-image: url('images/chestempty.png'); }   /* 照片被拿走後，變空盒子 */
+
+/* 📖 日記本的三張照片圖 */
+#investigate-img.item-diary-page0  { background-image: url('images/diaryp1.png'); }    /* 第一頁 */
+#investigate-img.item-diary-page1  { background-image: url('images/diaryp2.png'); }    /* 第二頁（原本缺漏的） */
+#investigate-img.item-diary-combined{ background-image: url('images/diaryfull.png'); } /* 拼上「相框殘頁」後的第二頁 */
+
+/* 🎯 八音盒內部「完整照片」的點擊熱區 */
+#box-photo-hitbox {
+    position: absolute;
+    width: 40%;   
+    height: 40%;
+    top: 30%;     
+    left: 30%;
+    cursor: pointer;
+    background-color: rgba(0, 0, 0, 0.1); 
+}
+
+/* 關閉按鈕 */
+.close-investigate-btn {
+    position: absolute;
+    top: 10px; right: 15px;
+    font-size: 30px; color: #fff;
+    cursor: pointer;
+    z-index: 10;
+}
+.close-investigate-btn:hover { color: #ff4444; }
+
+/* 🎯 碰撞箱通用設定 */
+.hitbox {
+    position: absolute;
+    cursor: pointer;
+    /* background: rgba(255, 0, 0, 0.3); */ /* 🛠️ 開發時可以解開這行看位置，調整好後註解掉變透明 */
+}
+
+/* 📦 盒子鎖匙孔碰撞箱位置（請根據你的盒子圖片微調） */
+#box-keyhole-hitbox {
+    width: 80px; height: 80px;
+    top: 60%; left: 42%;
+    background-color: rgba(255, 0, 0, 0.15) !important; /* 🛠️ 測試用紅色半透明 */
+}
+
+/* 📖 日記左翻頁（前一頁） */
+#diary-prev-hitbox {
+    width: 60px; height: 80%;
+    top: 10%; left: 5%;
+    background-color: rgba(255, 0, 0, 0.15) !important; /* 🛠️ 測試用紅色半透明 */
+}
+
+/* 📖 日記右翻頁（後一頁） */
+#diary-next-hitbox {
+    width: 60px; height: 80%;
+    top: 10%; right: 5%;
+    background-color: rgba(0, 255, 0, 0.15) !important; /* 🛠️ 測試用綠色半透明 */
+}
+
+/* =======================================================
+   🎬 結局三 & 結局四 專屬多階場景圖
+   ======================================================= */
+
+/* 🌌 剛逃出去時的 3 秒純黑幕 */
+.bg-black-screen {
+    background: #000000 !important;
+}
+
+/* 🏆 【結局三】場景一 & 場景二 */
+.bg-end3-scene1 {
+    background-image: url('images/wakeup.png') !important;
+    background-size: cover;
+    background-position: center;
+}
+.bg-end3-scene2 {
+    background-image: url('images/dead.png') !important;
+    background-size: cover;
+    background-position: center;
+}
+
+/* 🏆 【結局四】場景一 & 場景二 */
+.bg-end4-scene1 {
+    background-image: url('images/wakeup.png') !important;
+    background-size: cover;
+    background-position: center;
+}
+.bg-end4-scene2 {
+    background-image: url('images/dead.png') !important;
+    background-size: cover;
+    background-position: center;
+}

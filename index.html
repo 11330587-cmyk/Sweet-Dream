@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>密室逃脫遊戲</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="start-screen" class="screen active">
+        <div id="btn-start" class="menu-button" onclick="startGame()"></div>
+        <div id="btn-settings" class="menu-button" onclick="togglePopup('settings-popup')"></div>
+        <div id="btn-achievements" class="menu-button" onclick="togglePopup('achievements-popup')"></div>
+    </div>
+
+    <div id="settings-popup" class="popup hidden">
+        <div class="popup-content">
+            <h3>遊戲設定</h3>
+            <label for="volume-slider">音量調節：</label>
+            <input type="range" id="volume-slider" min="0" max="100" value="50">
+            <br><br>
+            <button onclick="togglePopup('settings-popup')">關閉</button>
+        </div>
+    </div>
+
+    <div id="achievements-popup" class="popup hidden">
+        <div class="popup-content">
+            <div class="endings-container">
+                <div class="ending-card"><div id="end-circle-1" class="ending-pic-slot"></div></div>
+                <div class="ending-card"><div id="end-circle-2" class="ending-pic-slot"></div></div>
+                <div class="ending-card"><div id="end-circle-3" class="ending-pic-slot"></div></div>
+                <div class="ending-card"><div id="end-circle-4" class="ending-pic-slot"></div></div>
+            </div>
+            <button class="close-btn" onclick="togglePopup('achievements-popup')">關閉</button>
+        </div>
+    </div>
+
+    <div id="intro-animation" class="screen hidden">
+        <div class="fade-text">你從黑暗中醒來...</div>
+    </div>
+
+    <div id="game-main" class="screen hidden">
+
+        <div id="scene-display">
+            
+            <video id="video-room5" class="room-video-bg" autoplay loop muted playsinline>
+                <source src="room5_bg.mp4" type="video/mp4">
+            </video>
+            <video id="mirror-video" class="hidden" preload="auto">
+                <source src="videos/mirror_event.mp4" type="video/mp4">
+                您的瀏覽器不支援影片播放。
+            </video>
+
+            <div id="monster" class="hidden"></div>
+
+            <div id="hallway-scene" class="hidden">
+                <div id="doors-stage-1" class="stage-doors">
+                    <div class="interactive-door door-left" onclick="enterRoom(1)"></div>
+                    <div class="interactive-door door-right" onclick="enterRoom(2)"></div>
+                    <div class="hallway-frame-hitbox frame-left" onclick="approachFrame(1, 'left')"></div>
+                    <div class="hallway-frame-hitbox frame-right" onclick="approachFrame(1, 'right')"></div>
+                </div>
+
+                <div id="doors-stage-2" class="stage-doors hidden">
+                    <div class="interactive-door door-left" onclick="enterRoom(3)"></div>
+                    <div class="interactive-door door-right" onclick="enterRoom(4)"></div>
+                    <div class="hallway-frame-hitbox frame-left" onclick="approachFrame(2, 'left')"></div>
+                    <div class="hallway-frame-hitbox frame-right" onclick="approachFrame(2, 'right')"></div>
+                </div>
+
+                <div id="doors-stage-3" class="stage-doors hidden">
+                    <div class="interactive-door door-left" onclick="enterRoom(5)"></div>
+                    <div class="interactive-door door-right" onclick="enterRoom(6)"></div>
+                    <div class="hallway-frame-hitbox frame-left" onclick="approachFrame(3, 'left')"></div>
+                    <div class="hallway-frame-hitbox frame-right" onclick="approachFrame(3, 'right')"></div>
+                </div>
+
+                <div id="doors-stage-4" class="stage-doors hidden">
+                    <div class="interactive-door door-left" onclick="enterRoom(7)"></div>
+                    <div class="interactive-door door-right" onclick="enterRoom(8)"></div>
+                    <div class="interactive-door door-exit" onclick="approachExit()"></div>
+                </div>
+
+                <div id="arrow-forward" class="arrow-btn arrow-forward" onclick="changeStage(1)"></div>
+                <div id="arrow-backward" class="arrow-btn arrow-backward hidden" onclick="changeStage(-1)"></div>
+                <div id="btn-back-to-start" class="back-to-start-btn" onclick="enterStartRoom()"></div>
+            </div>
+
+            <div id="frame-zoom-scene" class="stage-doors hidden">
+                <div id="scene-photo-item" onclick="takePhotoFromFrame()"></div>
+            </div>
+
+            <div id="room-controls" class="hidden">
+                <button class="screen-back-btn" onclick="leaveRoom()"></button>
+            </div>
+
+            <div id="room-doll" class="interactive-item item-doll" onclick="pickRoomItem('doll')"></div>
+            <div id="room-diary" class="interactive-item item-diary" onclick="pickRoomItem('diary')"></div>
+            <div id="room-box" class="interactive-item item-box" onclick="pickRoomItem('box')"></div>
+            <div id="room-key" class="interactive-item item-key" onclick="pickRoomItem('key')"></div>
+            <div id="room-mirror" class="interactive-item" onclick="clickMirror()"></div>
+            <div id="scene-photo-large-item" class="interactive-item item-photo-large hidden" onclick="takePhotoFromFrame()"></div>
+
+            <div id="exit-zoom-scene" class="stage-doors hidden">
+                <div id="lock-hitbox" onclick="clickLockHitbox()"></div>
+            </div>
+
+            <div id="custom-decision-popup" class="popup hidden">
+                <div class="custom-popup-content">
+                    <button class="popup-base-img" onclick="customPopup()"></button>
+                    <div id="btn-yes" class="transparent-choice-btn" onclick="confirmExit(true)"></div>
+                    <div id="btn-no" class="transparent-choice-btn" onclick="confirmExit(false)"></div>
+                </div>
+            </div>
+
+            <div id="exit-decision-center" class="center-cg-window hidden">
+                <div class="cg-overlay"></div>
+                <div class="cg-options-wrapper">
+                    <button class="cg-option-btn" onclick="confirmExit(true)">【 推開大門離開 】</button>
+                    <button class="cg-option-btn" onclick="confirmExit(false)">// 放下鑰匙留下 //</button>
+                </div>
+            </div>
+
+            <div id="game-dialog" class="dialog-box hidden" onclick="closeDialog()">
+                <div class="dialog-speaker">【 系統 】</div>
+                <div class="dialog-content">
+                    <p id="dialog-text">冒險對白測試文字...</p>
+                    <div id="dialog-click-hint" class="dialog-hint">▼</div>
+                </div>
+            </div>
+            
+            <div id="item-investigate-overlay" class="hidden" onclick="closeItemInvestigate()">
+                <div class="investigate-content" onclick="event.stopPropagation()">
+                    <div class="close-investigate-btn" onclick="closeItemInvestigate()">×</div>
+                    
+                    <div id="investigate-img">
+                        <div id="box-keyhole-hitbox" class="hitbox hidden" onclick="clickBoxKeyhole()"></div>
+                        <div id="box-photo-hitbox" class="hidden" onclick="takePhotoFromBox()"></div>
+                        <div id="diary-prev-hitbox" class="hitbox hidden" onclick="changeDiaryPage(-1)"></div>
+                        <div id="diary-next-hitbox" class="hitbox hidden" onclick="changeDiaryPage(1)"></div>
+                    </div> 
+                </div>
+            </div> </div> 
+
+        <div class="game-controls">
+            <div class="inventory-container">
+                <div class="inventory-title">物品欄</div>
+                <div id="inventory-slots" class="inventory-slots"></div>
+            </div>
+        </div>
+
+    </div> 
+
+    <div id="ending-screen" class="screen hidden">
+        <div id="ending-animation" class="fade-text">結局動畫播放中...</div>
+        <div id="game-over-box" class="hidden">
+            <div id="ending-photo-display"></div>
+            <button class="end-return-btn" onclick="restartGame()"></button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
